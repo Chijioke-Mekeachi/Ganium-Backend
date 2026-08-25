@@ -2,19 +2,29 @@ package db
 
 import (
 	"context"
+	"os"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-const DatabaseURL = `mongodb://localhost:27017`
-const DatabaseName = "ganium"
+var DatabaseURL = `mongodb://localhost:27017`
+var DatabaseName = "ganium"
+
 const CollectionName = "ganium"
 
 var MongoClient *mongo.Client
 
 func ConnectMongoDB() error {
+	if uri := strings.TrimSpace(os.Getenv("MONGO_URI")); uri != "" {
+		DatabaseURL = uri
+	}
+	if dbName := strings.TrimSpace(os.Getenv("MONGO_DATABASE")); dbName != "" {
+		DatabaseName = dbName
+	}
+
 	client, err := mongo.Connect(options.Client().ApplyURI(DatabaseURL))
 	if err != nil {
 		return err

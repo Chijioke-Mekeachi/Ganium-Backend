@@ -1,8 +1,14 @@
 package models
 
 type Login struct {
-	Email    string `json:"email" bson:"email"`
-	Password string `json:"password" bson:"password"`
+	Email    string `json:"email" bson:"email" example:"user@example.com"`
+	Password string `json:"password" bson:"password" example:"NewPassword123!"`
+}
+
+type RegisterRequest struct {
+	Email    string `json:"email" example:"user@example.com"`
+	Password string `json:"password" example:"NewPassword123!"`
+	FullName string `json:"full_name,omitempty" example:"Jane Doe"`
 }
 
 type Register struct {

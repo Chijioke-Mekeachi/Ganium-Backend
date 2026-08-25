@@ -7,14 +7,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
+	"ganium/internal/investigation"
+	"ganium/internal/security"
+	"ganium/pkg/types"
 	"ganium/src/db"
 	"ganium/src/models"
 
@@ -37,7 +41,7 @@ type scanMode string
 const (
 	scanModeBasic   scanMode = "basic"
 	scanModeMid     scanMode = "mid"
-	scanModeAdvance  scanMode = "advance"
+	scanModeAdvance scanMode = "advance"
 	scanModeURL     scanMode = "url"
 	scanModeWallet  scanMode = "wallet"
 	scanModeMessage scanMode = "message"
@@ -48,8 +52,7 @@ func ScanContent(userEmail string, payload models.RecordScanRequest) (bool, stri
 	users := db.MongoClient.Database(db.DatabaseName).Collection("users")
 	scans := db.MongoClient.Database(db.DatabaseName).Collection("scan_records")
 
-	var user models.User
-	if err := users.FindOne(context.Background(), bson.M{"email": userEmail}).Decode(&user); err != nil {
+	if err := users.FindOne(context.Background(), bson.M{"email": userEmail}).Err(); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return false, "user not found", nil, err
 		}
@@ -57,88 +60,110 @@ func ScanContent(userEmail string, payload models.RecordScanRequest) (bool, stri
 	}
 
 	mode := resolveScanMode(payload.ScanType, payload.ContentType, payload.Content)
-	evidence, resolvedType, err := buildEvidenceBundle(mode, payload.Content)
+	targetType := resolvedInvestigationTargetType(mode, payload.ContentType, payload.Content)
+	result, err := investigation.Default().Investigate(context.Background(), investigation.Request{
+		TargetType: targetType,
+		Target:     payload.Content,
+		Source:     payload.ContentType,
+	})
 	if err != nil {
+		_ = CreateNotification(userEmail, "Scan failed", "We couldn't complete your scan: "+err.Error(), "scan_failed")
 		return false, err.Error(), nil, err
 	}
 
-	result, err := analyzeWithGemini(payload.Content, resolvedType, mode, evidence)
-	if err != nil {
-		return false, err.Error(), nil, err
+	assessment := result.Assessment
+	if assessment == nil {
+		_ = CreateNotification(userEmail, "Scan failed", "Scan assessment was unavailable. Please try again.", "scan_failed")
+		return false, "assessment unavailable", nil, fmt.Errorf("empty assessment")
 	}
 
-	tokenCost := 1
+	tokenCost := assessment.TokensUsed
+	if tokenCost <= 0 {
+		tokenCost = 1
+	}
 	now := time.Now().UTC()
 	record := models.ScanRecord{
 		ID:              primitive.NewObjectID(),
 		UserID:          userEmail,
-		Content:         result.Content,
-		ContentType:     result.ContentType,
-		RiskScore:       result.RiskScore,
-		Classification:  result.Classification,
-		Explanation:     result.Explanation,
-		Recommendations: result.Recommendations,
+		Content:         payload.Content,
+		ContentType:     string(result.Evidence.TargetType),
+		RiskScore:       strconv.Itoa(assessment.RiskScore),
+		Classification:  strings.ToLower(string(assessment.Verdict)),
+		Explanation:     assessment.Summary,
+		Recommendations: strings.Join(assessment.RecommendedActions, "; "),
 		TokensUsed:      tokenCost,
 		CreatedAt:       now,
 	}
 
 	_, err = scans.InsertOne(context.Background(), record)
 	if err != nil {
+		_ = CreateNotification(userEmail, "Scan failed", "Your scan completed but could not be saved.", "scan_failed")
 		return false, "failed to store scan", nil, err
 	}
+	_ = models.InvalidateScanCache(context.Background(), record.ID.Hex())
 
 	_, _ = users.UpdateOne(context.Background(), bson.M{"email": userEmail}, bson.M{
-		"$inc": bson.M{"tokens_used_total": tokenCost, "tokens_remaining": -tokenCost},
+		"$inc": bson.M{"tokens_used_total": tokenCost, "tokens_remaining": -tokenCost, "wallet_balance": -(float64(tokenCost) / 10.0)},
 		"$set": bson.M{"last_scan_at": now, "updated_at": now},
 	})
+	_ = models.InvalidateUserCache(context.Background(), userEmail)
+
+	_ = CreateNotification(
+		userEmail,
+		"Scan complete",
+		fmt.Sprintf("Your %s scan finished with verdict: %s.", mode, record.Classification),
+		"scan_complete",
+	)
+
+	fmt.Println(record)
 
 	return true, "scan completed", &record, nil
 }
 
 func ScanBasic(userEmail string, content string) (bool, string, *models.ScanRecord, error) {
 	return ScanContent(userEmail, models.RecordScanRequest{
-		Content:   content,
-		ScanType:  string(scanModeBasic),
+		Content:     content,
+		ScanType:    string(scanModeBasic),
 		ContentType: "text",
 	})
 }
 
 func ScanMid(userEmail string, content string) (bool, string, *models.ScanRecord, error) {
 	return ScanContent(userEmail, models.RecordScanRequest{
-		Content:   content,
-		ScanType:  string(scanModeMid),
+		Content:     content,
+		ScanType:    string(scanModeMid),
 		ContentType: "text",
 	})
 }
 
 func ScanAdvance(userEmail string, content string) (bool, string, *models.ScanRecord, error) {
 	return ScanContent(userEmail, models.RecordScanRequest{
-		Content:   content,
-		ScanType:  string(scanModeAdvance),
+		Content:     content,
+		ScanType:    string(scanModeAdvance),
 		ContentType: "text",
 	})
 }
 
 func ScanMessage(userEmail string, content string) (bool, string, *models.ScanRecord, error) {
 	return ScanContent(userEmail, models.RecordScanRequest{
-		Content:   content,
-		ScanType:  string(scanModeMessage),
+		Content:     content,
+		ScanType:    string(scanModeMessage),
 		ContentType: "message",
 	})
 }
 
 func ScanURL(userEmail string, content string) (bool, string, *models.ScanRecord, error) {
 	return ScanContent(userEmail, models.RecordScanRequest{
-		Content:   content,
-		ScanType:  string(scanModeURL),
+		Content:     content,
+		ScanType:    string(scanModeURL),
 		ContentType: "url",
 	})
 }
 
 func ScanWallet(userEmail string, content string) (bool, string, *models.ScanRecord, error) {
 	return ScanContent(userEmail, models.RecordScanRequest{
-		Content:   content,
-		ScanType:  string(scanModeWallet),
+		Content:     content,
+		ScanType:    string(scanModeWallet),
 		ContentType: "wallet",
 	})
 }
@@ -171,6 +196,41 @@ func resolveScanMode(scanType, contentType, content string) scanMode {
 			return scanModeWallet
 		}
 		return scanModeBasic
+	}
+}
+
+func resolvedInvestigationTargetType(mode scanMode, contentType, content string) types.TargetType {
+	switch mode {
+	case scanModeURL:
+		return types.TargetTypeURL
+	case scanModeWallet:
+		return types.TargetTypeWallet
+	case scanModeMessage:
+		return types.TargetTypeMessage
+	case scanModeText, scanModeBasic, scanModeMid, scanModeAdvance:
+		switch strings.ToLower(strings.TrimSpace(contentType)) {
+		case "url":
+			return types.TargetTypeURL
+		case "wallet":
+			return types.TargetTypeWallet
+		case "message":
+			return types.TargetTypeMessage
+		}
+		if looksLikeURL(content) {
+			return types.TargetTypeURL
+		}
+		if looksLikeWallet(content) {
+			return types.TargetTypeWallet
+		}
+		return types.TargetTypeMessage
+	default:
+		if looksLikeURL(content) {
+			return types.TargetTypeURL
+		}
+		if looksLikeWallet(content) {
+			return types.TargetTypeWallet
+		}
+		return types.TargetTypeMessage
 	}
 }
 
@@ -257,8 +317,13 @@ func fetchHostEvidence(parsed *url.URL) string {
 }
 
 func fetchHTTPEvidence(raw string) string {
-	client := &http.Client{Timeout: 8 * time.Second}
-	req, err := http.NewRequest(http.MethodGet, raw, nil)
+	parsed, err := security.ValidateTargetURL(raw)
+	if err != nil {
+		return "HTTP fetch blocked: " + err.Error()
+	}
+
+	client := security.SafeHTTPClient(8*time.Second, 5)
+	req, err := http.NewRequest(http.MethodGet, parsed.String(), nil)
 	if err != nil {
 		return ""
 	}
@@ -302,7 +367,7 @@ func analyzeWithGemini(content, contentType string, mode scanMode, evidence stri
 
 	model := strings.TrimSpace(os.Getenv("GEMINI_MODEL"))
 	if model == "" {
-		model = "gemini-1.5-flash"
+		model = "gemini-3.7-flash"
 	}
 
 	systemPrompt := `You are Ganium's scam detection engine.
@@ -339,13 +404,13 @@ Use the evidence bundle when available. If the input is a URL, assess phishing, 
 	body := map[string]any{
 		"contents": []map[string]any{
 			{
-				"role": "user",
+				"role":  "user",
 				"parts": []map[string]any{{"text": systemPrompt + "\n\n" + prompt}},
 			},
 		},
 		"generationConfig": map[string]any{
-			"temperature":      0.2,
-			"maxOutputTokens":   700,
+			"temperature":        0.2,
+			"maxOutputTokens":    700,
 			"response_mime_type": "application/json",
 		},
 	}
@@ -412,4 +477,6 @@ Use the evidence bundle when available. If the input is a URL, assess phishing, 
 	return &result, nil
 }
 
-func netLookupIP(host string) ([]net.IP, error) { return net.DefaultResolver.LookupIP(context.Background(), "ip", host) }
+func netLookupIP(host string) ([]net.IP, error) {
+	return net.DefaultResolver.LookupIP(context.Background(), "ip", host)
+}

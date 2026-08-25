@@ -1,0 +1,1365 @@
+basePath: /
+definitions:
+  models.BalanceSummary:
+    properties:
+      plans:
+        items:
+          $ref: '#/definitions/models.PaymentPlan'
+        type: array
+      wallet:
+        $ref: '#/definitions/models.WalletSummary'
+    type: object
+  models.Login:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: NewPassword123!
+        type: string
+    type: object
+  models.PaymentPlan:
+    properties:
+      amount:
+        type: number
+      checkout_mode:
+        type: string
+      code:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      tokens:
+        type: integer
+    type: object
+  models.ReceiptRequest:
+    properties:
+      amount:
+        example: 49.99
+        type: number
+      currency:
+        example: NGN
+        type: string
+      description:
+        example: Pro subscription payment
+        type: string
+      payer_email:
+        example: user@example.com
+        type: string
+      payer_name:
+        example: Jane Doe
+        type: string
+      payment_method:
+        example: card
+        type: string
+      reference:
+        example: PAY-20260821-001
+        type: string
+      status:
+        example: success
+        type: string
+      transaction_date:
+        example: "2026-08-21T08:30:00Z"
+        type: string
+    type: object
+  models.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      full_name:
+        example: Jane Doe
+        type: string
+      password:
+        example: NewPassword123!
+        type: string
+    type: object
+  models.UserProfileResponse:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      current_period_end:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      isVerified:
+        type: boolean
+      last_scan_at:
+        type: string
+      subscription_plan_id:
+        type: string
+      subscription_status:
+        type: string
+      tokens_remaining:
+        type: integer
+      tokens_used_total:
+        type: integer
+      updated_at:
+        type: string
+      wallet_balance:
+        type: number
+    type: object
+  models.UserProfileUpdateRequest:
+    properties:
+      avatar_url:
+        example: https://cdn.example.com/avatar.png
+        type: string
+      full_name:
+        example: Jane Doe
+        type: string
+    type: object
+  models.WalletSummary:
+    properties:
+      email:
+        type: string
+      token_rate_per_usd:
+        example: 10
+        type: integer
+      token_value_usd:
+        example: 0.1
+        type: number
+      tokens_remaining:
+        type: integer
+      tokens_used_total:
+        type: integer
+      updated_at:
+        type: string
+      wallet_balance:
+        type: number
+    type: object
+  routes.AdvanceScanRequest:
+    properties:
+      content:
+        example: Claim your reward at https://secure-login-example.com/verify before
+          it expires.
+        type: string
+    type: object
+  routes.BasicScanRequest:
+    properties:
+      content:
+        example: Your account will be suspended unless you confirm your password now.
+        type: string
+    type: object
+  routes.CreateCryptoPaymentRequest:
+    properties:
+      plan:
+        example: pro
+        type: string
+    type: object
+  routes.ForgotPasswordRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    type: object
+  routes.InvestigateRequest:
+    properties:
+      case_id:
+        example: CASE-12345
+        type: string
+      investigation_id:
+        example: INV-12345
+        type: string
+      network:
+        example: ethereum
+        type: string
+      source:
+        example: user
+        type: string
+      target:
+        example: https://example.com
+        type: string
+      target_type:
+        example: url
+        type: string
+    type: object
+  routes.MessageScanRequest:
+    properties:
+      content:
+        example: Please send the 0.5 ETH to this address right away so we can release
+          the funds.
+        type: string
+    type: object
+  routes.MidScanRequest:
+    properties:
+      content:
+        example: We detected unusual activity. Please update your payment details
+          immediately.
+        type: string
+    type: object
+  routes.PaystackInitializeRequest:
+    properties:
+      callback:
+        example: https://app.ganium.ai/payment/callback
+        type: string
+      callback_url:
+        example: https://app.ganium.ai/payment/callback
+        type: string
+      callbackUrl:
+        example: https://app.ganium.ai/payment/callback
+        type: string
+      mode:
+        example: hosted
+        type: string
+      plan:
+        example: pro
+        type: string
+      plan_code:
+        example: pro
+        type: string
+      planCode:
+        example: pro
+        type: string
+      planName:
+        example: Pro
+        type: string
+      reference:
+        example: GANIUM-123456
+        type: string
+    type: object
+  routes.PaystackVerifyRequest:
+    properties:
+      reference:
+        example: GANIUM-123456
+        type: string
+    type: object
+  routes.ResendOTPRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    type: object
+  routes.ResetPasswordRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      newPassword:
+        example: NewPassword123!
+        type: string
+      token:
+        example: reset-token
+        type: string
+    type: object
+  routes.ScanRequest:
+    properties:
+      content:
+        example: Congratulations! You have won a prize. Click this link now.
+        type: string
+    type: object
+  routes.SubmitCryptoPaymentRequest:
+    properties:
+      payment_id:
+        example: GAN-SJLY-123456789
+        type: string
+      signature:
+        example: 5abc123...
+        type: string
+      user_wallet:
+        example: 7abc123...
+        type: string
+    type: object
+  routes.URLScanRequest:
+    properties:
+      content:
+        example: https://secure-login-example.com/account/verify?session=123
+        type: string
+    type: object
+  routes.VerifyOTPRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      otp:
+        example: "123456"
+        type: string
+    type: object
+  routes.WalletScanRequest:
+    properties:
+      content:
+        example: 0x3fD2b5e4c7A9E2d6C1b8F0a3D4e5F67890123456
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@ganium.ai
+    name: Ganium Support
+  description: Ganium AI scam detection, security investigation, scanning, authentication
+    and payment API.
+  license:
+    name: Proprietary
+  termsOfService: https://ganium.ai/terms
+  title: Ganium API
+  version: "1.0"
+paths:
+  /api/balance:
+    get:
+      description: Returns the current wallet balance together with the token pricing
+        plans. The base plan is $1 for 10 tokens.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.BalanceSummary'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get balance and pricing
+      tags:
+      - Wallet
+  /api/crypto/payment/create:
+    post:
+      consumes:
+      - application/json
+      description: Creates a pending SJLY payment intent.
+      parameters:
+      - description: Crypto payment
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.CreateCryptoPaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create SJLY payment
+      tags:
+      - Crypto Payments
+  /api/crypto/payment/status:
+    get:
+      description: Returns the current status of an SJLY payment.
+      parameters:
+      - description: Crypto payment ID
+        in: query
+        name: payment_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get crypto payment status
+      tags:
+      - Crypto Payments
+  /api/crypto/payment/submit:
+    post:
+      consumes:
+      - application/json
+      description: Saves the Solana transaction signature for verification.
+      parameters:
+      - description: Transaction
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.SubmitCryptoPaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit SJLY transaction
+      tags:
+      - Crypto Payments
+  /api/investigate:
+    post:
+      consumes:
+      - application/json
+      description: Runs the Ganium security investigation pipeline against a target.
+      parameters:
+      - description: Investigation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.InvestigateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Run security investigation
+      tags:
+      - Investigation
+  /api/me:
+    delete:
+      description: Deletes the authenticated user's account and related scans and
+        payment history.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete current user account
+      tags:
+      - Users
+    get:
+      description: Returns the authenticated user's profile, token counts, and wallet
+        balance.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserProfileResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - Users
+    patch:
+      consumes:
+      - application/json
+      description: Updates editable profile fields for the authenticated user.
+      parameters:
+      - description: Profile update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserProfileUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update current user profile
+      tags:
+      - Users
+  /api/paystack/callback:
+    get:
+      description: Handles Paystack payment callback.
+      parameters:
+      - description: Paystack transaction reference
+        in: query
+        name: reference
+        required: true
+        type: string
+      - description: Payment status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Paystack callback
+      tags:
+      - Paystack
+  /api/paystack/initialize:
+    post:
+      consumes:
+      - application/json
+      description: Initializes a Paystack payment transaction.
+      parameters:
+      - description: Payment initialization
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.PaystackInitializeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Initialize Paystack payment
+      tags:
+      - Paystack
+  /api/paystack/plans:
+    get:
+      description: Returns available Ganium subscription plans.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get payment plans
+      tags:
+      - Paystack
+  /api/paystack/stream:
+    get:
+      description: Streams Paystack payment status updates using SSE.
+      parameters:
+      - description: Paystack payment reference
+        in: query
+        name: reference
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Stream payment status
+      tags:
+      - Paystack
+  /api/paystack/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies a Paystack transaction and credits the user's account.
+      parameters:
+      - description: Payment verification request
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/routes.PaystackVerifyRequest'
+      - description: Payment reference
+        in: query
+        name: reference
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Verify Paystack payment
+      tags:
+      - Paystack
+  /api/receipt/pdf:
+    post:
+      consumes:
+      - application/json
+      description: Generates a PDF payment receipt for a transaction.
+      parameters:
+      - description: Receipt information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReceiptRequest'
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Generate payment receipt PDF
+      tags:
+      - PDF
+  /api/scan/{scanType}/pdf:
+    post:
+      consumes:
+      - application/json
+      description: Generates a PDF report for a security scan.
+      parameters:
+      - description: Scan type
+        enum:
+        - basic
+        - mid
+        - advance
+        - message
+        - url
+        - wallet
+        in: path
+        name: scanType
+        required: true
+        type: string
+      - description: Content to scan for the selected scanType
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.ScanRequest'
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Generate scan PDF
+      tags:
+      - PDF
+  /api/scan/advance:
+    post:
+      consumes:
+      - application/json
+      description: Performs an advanced security scan on supplied content.
+      parameters:
+      - description: Text content to scan
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.AdvanceScanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Advanced security scan
+      tags:
+      - Scan
+  /api/scan/basic:
+    post:
+      consumes:
+      - application/json
+      description: Performs a basic security scan on supplied content.
+      parameters:
+      - description: Text content to scan
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.BasicScanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Basic security scan
+      tags:
+      - Scan
+  /api/scan/message:
+    post:
+      consumes:
+      - application/json
+      description: Analyzes a message for scams, phishing, and malicious content.
+      parameters:
+      - description: Message content to scan
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.MessageScanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Scan message
+      tags:
+      - Scan
+  /api/scan/mid:
+    post:
+      consumes:
+      - application/json
+      description: Performs a mid-level security scan on supplied content.
+      parameters:
+      - description: Text content to scan
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.MidScanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mid-level security scan
+      tags:
+      - Scan
+  /api/scan/url:
+    post:
+      consumes:
+      - application/json
+      description: Analyzes a URL for malicious, phishing, and scam indicators.
+      parameters:
+      - description: URL to scan
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.URLScanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Scan URL
+      tags:
+      - Scan
+  /api/scan/wallet:
+    post:
+      consumes:
+      - application/json
+      description: Analyzes a cryptocurrency wallet address for suspicious activity.
+      parameters:
+      - description: Wallet address to scan
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.WalletScanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Scan wallet
+      tags:
+      - Scan
+  /api/wallet:
+    get:
+      description: Returns the authenticated user's token balance and wallet value.
+        This endpoint is read-only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.WalletSummary'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get wallet summary
+      tags:
+      - Wallet
+  /forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Starts the password recovery process for a user.
+      parameters:
+      - description: Email address
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Forgot password
+      tags:
+      - Authentication
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a Ganium user and returns a JWT token.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Login'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - Authentication
+  /paystack/webhook:
+    post:
+      consumes:
+      - application/json
+      description: Receives and verifies Paystack webhook events.
+      parameters:
+      - description: Paystack webhook signature
+        in: header
+        name: x-paystack-signature
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Paystack webhook
+      tags:
+      - Paystack
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new Ganium user account.
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - Authentication
+  /resend-otp:
+    post:
+      consumes:
+      - application/json
+      description: Resends a verification OTP to the specified email address.
+      parameters:
+      - description: Email address
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.ResendOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Resend OTP
+      tags:
+      - Authentication
+  /reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Resets a user's password using a valid reset token.
+      parameters:
+      - description: Password reset details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Reset password
+      tags:
+      - Authentication
+  /verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the OTP sent to a user's email address.
+      parameters:
+      - description: OTP verification details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.VerifyOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Verify OTP
+      tags:
+      - Authentication
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT authentication. Enter your token using the format: Bearer <token>.'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

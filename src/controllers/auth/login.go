@@ -1,11 +1,11 @@
 package auth
-
 import (
 	"context"
 	"errors"
 	"fmt"
 	"ganium/src/db"
 	"ganium/src/models"
+	"ganium/src/notify"
 	"ganium/src/utils"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -38,6 +38,13 @@ func LoginController(data models.Login) (bool, string, string) {
 		fmt.Println(err)
 		return false, "failed to generate token", ""
 	}
+
+	_ = notify.Create(
+		user.Email,
+		"New login",
+		"You just logged in to your Ganium account.",
+		"login",
+	)
 
 	return true, "login successful", token
 }
