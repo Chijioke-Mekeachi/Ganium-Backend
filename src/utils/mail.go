@@ -13,7 +13,7 @@ import (
 //   SMTP_PASS - Gmail App Password
 func SendEmail(to, subject, body string) error {
 	smtpHost := "smtp.gmail.com"
-	smtpPort := "587"
+	smtpPort := "465"
 
 	from := os.Getenv("SMTP_USER")
 	pass := os.Getenv("SMTP_PASS")
