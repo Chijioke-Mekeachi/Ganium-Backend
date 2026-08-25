@@ -13,12 +13,6 @@ type Config struct {
 	Port               string
 	MongoURI           string
 	DatabaseName       string
-	RedisHost          string
-	RedisPort          string
-	RedisPassword      string
-	RedisDB            int
-	ScanCacheTTL       time.Duration
-	UserCacheTTL       time.Duration
 	JWTSecret          string
 	GeminiAPIKey       string
 	GeminiModel        string
@@ -65,25 +59,13 @@ func LoadFromEnv() *Config {
 		maxBodySize = 524288
 	}
 
-	redisDB, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
-	if redisDB < 0 {
-		redisDB = 0
-	}
-
-	scanCacheTTL := getEnvDurationSeconds("SCAN_CACHE_TTL_SECONDS", 15*time.Minute)
-	userCacheTTL := getEnvDurationSeconds("USER_CACHE_TTL_SECONDS", 30*time.Second)
+	
 
 	return &Config{
 		Environment:        env,
 		Port:               port,
 		MongoURI:           getEnv("MONGO_URI", "mongodb://localhost:27017"),
 		DatabaseName:       getEnv("MONGO_DATABASE", "ganium"),
-		RedisHost:          getEnv("REDIS_HOST", "localhost"),
-		RedisPort:          getEnv("REDIS_PORT", "6379"),
-		RedisPassword:      getEnv("REDIS_PASSWORD", ""),
-		RedisDB:            redisDB,
-		ScanCacheTTL:       scanCacheTTL,
-		UserCacheTTL:       userCacheTTL,
 		JWTSecret:          getEnv("JWT_SECRET", "ganium-secure-default-change-in-production"),
 		GeminiAPIKey:       getEnv("GEMINI_API_KEY", getEnv("GOOGLE_API_KEY", "")),
 		GeminiModel:        getEnv("GEMINI_MODEL", "gemini-3.7-flash"),
@@ -102,13 +84,7 @@ func LoadFromEnv() *Config {
 	}
 }
 
-func getEnvDurationSeconds(key string, fallback time.Duration) time.Duration {
-	seconds, err := strconv.Atoi(getEnv(key, strconv.Itoa(int(fallback/time.Second))))
-	if err != nil || seconds <= 0 {
-		return fallback
-	}
-	return time.Duration(seconds) * time.Second
-}
+
 
 func getEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists {

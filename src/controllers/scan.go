@@ -22,8 +22,8 @@ import (
 	"ganium/src/db"
 	"ganium/src/models"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -100,13 +100,13 @@ func ScanContent(userEmail string, payload models.RecordScanRequest) (bool, stri
 		_ = CreateNotification(userEmail, "Scan failed", "Your scan completed but could not be saved.", "scan_failed")
 		return false, "failed to store scan", nil, err
 	}
-	_ = models.InvalidateScanCache(context.Background(), record.ID.Hex())
+	// Redis cache invalidation removed
 
 	_, _ = users.UpdateOne(context.Background(), bson.M{"email": userEmail}, bson.M{
 		"$inc": bson.M{"tokens_used_total": tokenCost, "tokens_remaining": -tokenCost, "wallet_balance": -(float64(tokenCost) / 10.0)},
 		"$set": bson.M{"last_scan_at": now, "updated_at": now},
 	})
-	_ = models.InvalidateUserCache(context.Background(), userEmail)
+	// Redis cache invalidation removed
 
 	_ = CreateNotification(
 		userEmail,

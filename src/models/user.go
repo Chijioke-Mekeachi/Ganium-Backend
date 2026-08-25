@@ -1,23 +1,12 @@
 package models
 
 import (
-	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"strings"
 	"time"
-
-	"ganium/internal/config"
-	"ganium/src/db"
-
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type User struct {
-	ID                 bson.ObjectID `json:"id" bson:"_id,omitempty"`
+	ID bson.ObjectID `json:"id" bson:"_id,omitempty"`
 	Email              string        `json:"email" bson:"email"`
 	Password           string        `json:"password" bson:"password"`
 	FullName           string        `json:"full_name,omitempty" bson:"full_name,omitempty"`
@@ -131,65 +120,4 @@ type WalletSummary struct {
 type BalanceSummary struct {
 	Wallet WalletSummary `json:"wallet"`
 	Plans  []PaymentPlan `json:"plans"`
-}
-
-func GetUserByID(ctx context.Context, id string) (bson.M, error) {
-	id = strings.TrimSpace(id)
-	if id == "" {
-		return nil, fmt.Errorf("email is required")
-	}
-
-	key := userCacheKey(id)
-	if db.RedisClient != nil {
-		cached, cacheErr := db.RedisClient.Get(ctx, key).Bytes()
-		if cacheErr == nil {
-			var doc bson.M
-			if err := json.Unmarshal(cached, &doc); err == nil {
-				return doc, nil
-			}
-		}
-	}
-
-	var doc bson.M
-	err := db.MongoClient.
-		Database(db.DatabaseName).
-		Collection("users").
-		FindOne(
-			ctx,
-			bson.M{"email": id},
-			options.FindOne().SetProjection(bson.M{
-				"password":         0,
-				"otpHash":          0,
-				"otpExpiry":        0,
-				"resetTokenHash":   0,
-				"resetTokenExpiry": 0,
-			}),
-		).
-		Decode(&doc)
-	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, fmt.Errorf("user not found")
-		}
-		return nil, err
-	}
-
-	if db.RedisClient != nil {
-		if encoded, marshalErr := json.Marshal(doc); marshalErr == nil {
-			cfg := config.LoadFromEnv()
-			_ = db.RedisClient.Set(ctx, key, encoded, jitterTTL(cfg.UserCacheTTL)).Err()
-		}
-	}
-
-	return doc, nil
-}
-
-func InvalidateUserCache(ctx context.Context, id string) error {
-	if db.RedisClient == nil {
-		return nil
-	}
-	return db.RedisClient.Del(ctx, userCacheKey(id)).Err()
-}
-
-func userCacheKey(id string) string {
-	return "user:" + strings.TrimSpace(id)
 }

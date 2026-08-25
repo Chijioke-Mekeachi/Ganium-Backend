@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -9,8 +10,9 @@ import (
 	"ganium/src/db"
 	"ganium/src/models"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 func GetCurrentUserProfile(email string) (*models.UserProfileResponse, error) {
@@ -65,7 +67,7 @@ func UpdateCurrentUserProfile(
 		return nil, fmt.Errorf("user not found")
 	}
 
-	_ = models.InvalidateUserCache(context.Background(), email)
+	// Redis cache invalidation removed
 
 	return GetCurrentUserProfile(email)
 }
@@ -130,7 +132,7 @@ func DeleteCurrentUser(email string) error {
 		return fmt.Errorf("user not found")
 	}
 
-	_ = models.InvalidateUserCache(ctx, email)
+	// Redis cache invalidation removed
 
 	return nil
 }
@@ -202,8 +204,30 @@ func fetchUserDocument(
 	if email == "" {
 		return nil, fmt.Errorf("email is required")
 	}
+	collection := db.MongoClient.
+		Database(db.DatabaseName).
+		Collection("users")
 
-	return models.GetUserByID(context.Background(), email)
+	var doc bson.M
+
+	err := collection.
+		FindOne(
+			context.Background(),
+			bson.M{
+				"email": email,
+			},
+		).
+		Decode(&doc)
+
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, fmt.Errorf("user not found")
+		}
+
+		return nil, err
+	}
+
+	return doc, nil
 }
 
 // ============================================================
