@@ -1,4 +1,5 @@
 package auth
+
 import (
 	"context"
 	"errors"
@@ -33,7 +34,12 @@ func LoginController(data models.Login) (bool, string, string) {
 		return false, "email not verified", ""
 	}
 
-	token, err := utils.GenerateJWT(user.Email)
+	role := "user"
+	if user.Role != "" {
+		role = user.Role
+	}
+
+	token, err := utils.GenerateJWTWithRole(user.Email, role)
 	if err != nil {
 		fmt.Println(err)
 		return false, "failed to generate token", ""

@@ -1057,73 +1057,59 @@ func GetPaymentHistory(
 }
 
 // ============================================================
-// SOLANA / SJLY PAYMENT SYSTEM
+// GENERAL CRYPTO PAYMENT CREATION
 // ============================================================
 
-// ============================================================
-// CreateSJLYPayment
-// ============================================================
-
-func CreateSJLYPayment(
+func CreateCryptoTokenPayment(
 	email,
-	planCode string,
+	planCode,
+	tokenSymbol string,
 ) (*models.CreateCryptoPaymentResponse, error) {
-
 	email = strings.TrimSpace(email)
-
 	if email == "" {
-		return nil, fmt.Errorf(
-			"authenticated email is required",
-		)
+		return nil, fmt.Errorf("authenticated email is required")
 	}
 
 	plan, ok := ResolvePaymentPlan(planCode)
-
 	if !ok {
-		return nil, fmt.Errorf(
-			"invalid plan selected",
-		)
+		return nil, fmt.Errorf("invalid plan selected")
 	}
 
-	mint := SJLYMintAddress()
+	tokenSymbol = NormalizeCryptoTokenSymbol(tokenSymbol)
+	supported := map[string]struct{}{"SJLY": {}, "USDT": {}, "USDC": {}}
+	if _, ok := supported[tokenSymbol]; !ok {
+		return nil, fmt.Errorf("unsupported crypto token %q", tokenSymbol)
+	}
 
+	mint := MintAddressForCryptoToken(tokenSymbol)
 	if mint == "" {
-		return nil, fmt.Errorf(
-			"SJLY mint address is not configured",
-		)
+		return nil, fmt.Errorf("%s mint address is not configured", tokenSymbol)
 	}
 
-	recipient := GaniumSolanaWallet()
-
+	recipient := GaniumCryptoTreasuryWallet()
 	if recipient == "" {
-		return nil, fmt.Errorf(
-			"GaniumAI Solana receiving wallet is not configured",
-		)
+		return nil, fmt.Errorf("Ganium crypto receiving wallet is not configured")
 	}
 
-	const sjlyPerUSD = int64(100000)
+	var tokenAmount string
+	switch tokenSymbol {
+	case "USDT", "USDC":
+		tokenAmount = fmt.Sprintf("%d", int64(math.Round(plan.Amount*1_000_000)))
+	default:
+		const sjlyPerUSD = int64(100000)
+		tokenAmount = fmt.Sprintf("%d", int64(math.Round(plan.Amount*float64(sjlyPerUSD))))
+	}
 
-	tokenAmount := fmt.Sprintf(
-		"%d",
-		int64(math.Round(
-			plan.Amount*float64(sjlyPerUSD),
-		)),
-	)
-
-	paymentID := fmt.Sprintf(
-		"GAN-SJLY-%d",
-		time.Now().UnixNano(),
-	)
-
+	paymentID := fmt.Sprintf("GAN-%s-%d", tokenSymbol, time.Now().UnixNano())
 	now := time.Now().UTC()
 
 	payment := models.CryptoPayment{
 		PaymentID:       paymentID,
-		Email:            email,
+		Email:           email,
 		Plan:            plan.Code,
 		USDPrice:        plan.Amount,
 		TokenAmount:     tokenAmount,
-		TokenSymbol:     "SJLY",
+		TokenSymbol:     tokenSymbol,
 		TokenMint:       mint,
 		Network:         "solana-mainnet",
 		RecipientWallet: recipient,
@@ -1137,16 +1123,9 @@ func CreateSJLYPayment(
 	_, err := db.MongoClient.
 		Database(db.DatabaseName).
 		Collection("crypto_payments").
-		InsertOne(
-			context.Background(),
-			payment,
-		)
-
+		InsertOne(context.Background(), payment)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to create crypto payment: %w",
-			err,
-		)
+		return nil, fmt.Errorf("failed to create crypto payment: %w", err)
 	}
 
 	return &models.CreateCryptoPaymentResponse{
@@ -1163,234 +1142,3 @@ func CreateSJLYPayment(
 		CreatedAt:       payment.CreatedAt,
 	}, nil
 }
-
-// ============================================================
-// GetCryptoPayment
-// ============================================================
-
-func GetCryptoPayment(
-	paymentID string,
-) (*models.CryptoPayment, error) {
-
-	paymentID = strings.TrimSpace(paymentID)
-
-	if paymentID == "" {
-		return nil, fmt.Errorf(
-			"payment ID is required",
-		)
-	}
-
-	var payment models.CryptoPayment
-
-	err := db.MongoClient.
-		Database(db.DatabaseName).
-		Collection("crypto_payments").
-		FindOne(
-			context.Background(),
-			bson.M{
-				"payment_id": paymentID,
-			},
-		).
-		Decode(&payment)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &payment, nil
-}
-
-// ============================================================
-// SaveCryptoPaymentSignature
-// ============================================================
-
-func SaveCryptoPaymentSignature(
-	paymentID,
-	signature,
-	userWallet string,
-) (*models.CryptoPayment, error) {
-
-	payment, err := GetCryptoPayment(paymentID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if payment.Credited {
-		return payment, nil
-	}
-
-	signature = strings.TrimSpace(signature)
-
-	if signature == "" {
-		return nil, fmt.Errorf(
-			"transaction signature is required",
-		)
-	}
-
-	now := time.Now().UTC()
-
-	_, err = db.MongoClient.
-		Database(db.DatabaseName).
-		Collection("crypto_payments").
-		UpdateOne(
-			context.Background(),
-
-			bson.M{
-				"payment_id": paymentID,
-			},
-
-			bson.M{
-				"$set": bson.M{
-					"transaction_signature": signature,
-					"user_wallet":           userWallet,
-					"status":                "verifying",
-					"updated_at":            now,
-				},
-			},
-		)
-
-	if err != nil {
-		return nil, err
-	}
-
-	payment.TransactionSignature = signature
-	payment.UserWallet = userWallet
-	payment.Status = "verifying"
-	payment.UpdatedAt = now
-
-	return payment, nil
-}
-
-// ============================================================
-// MarkCryptoPaymentSuccessful
-// ============================================================
-
-func MarkCryptoPaymentSuccessful(
-	payment *models.CryptoPayment,
-) error {
-
-	if payment == nil {
-		return fmt.Errorf(
-			"payment is nil",
-		)
-	}
-
-	if payment.Credited {
-		return nil
-	}
-
-	ctx := context.Background()
-
-	database := db.MongoClient.Database(db.DatabaseName)
-
-	userCollection := database.Collection("users")
-	paymentCollection := database.Collection("crypto_payments")
-
-	// ========================================================
-	// Find user first
-	// ========================================================
-
-	var user bson.M
-
-	err := userCollection.
-		FindOne(
-			ctx,
-			bson.M{
-				"email": payment.Email,
-			},
-		).
-		Decode(&user)
-
-	if err != nil {
-		return fmt.Errorf(
-			"failed to find user %q: %w",
-			payment.Email,
-			err,
-		)
-	}
-
-	now := time.Now().UTC()
-
-	// ========================================================
-	// Credit user
-	// ========================================================
-
-	result, err := userCollection.
-		UpdateOne(
-			ctx,
-
-			bson.M{
-				"email": payment.Email,
-			},
-
-			bson.M{
-				"$inc": bson.M{
-					"tokens_remaining": payment.TokensGranted,
-					"wallet_balance":   payment.USDPrice,
-				},
-
-				"$set": bson.M{
-					"updated_at": now,
-				},
-			},
-		)
-
-	if err != nil {
-		return fmt.Errorf(
-			"failed to credit user: %w",
-			err,
-		)
-	}
-
-	if result.MatchedCount == 0 {
-		return fmt.Errorf(
-			"no user matched email %q",
-			payment.Email,
-		)
-	}
-
-	// ========================================================
-	// Mark payment successful
-	// ========================================================
-
-	paymentResult, err := paymentCollection.
-		UpdateOne(
-			ctx,
-
-			bson.M{
-				"payment_id": payment.PaymentID,
-				"credited":   false,
-			},
-
-			bson.M{
-				"$set": bson.M{
-					"status":      "success",
-					"credited":    true,
-					"verified_at": now,
-					"updated_at":  now,
-				},
-			},
-		)
-
-	if err != nil {
-		return fmt.Errorf(
-			"failed to update crypto payment: %w",
-			err,
-		)
-	}
-
-	if paymentResult.MatchedCount == 0 {
-		return nil
-	}
-	
-
-	_ = CreateNotification(
-		payment.Email,
-		"Payment successful",
-		fmt.Sprintf("Your crypto payment for the %s plan was confirmed. %d tokens have been added to your wallet.", payment.Plan, payment.TokensGranted),
-		"payment_success",
-	)
-
-	return nil
-} 

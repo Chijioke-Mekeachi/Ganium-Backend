@@ -5,6 +5,7 @@ import (
 
 	"ganium/internal/config"
 	"ganium/internal/investigation"
+	"ganium/src/controllers"
 	"ganium/src/db"
 	"ganium/src/middleware"
 	"ganium/src/routes"
@@ -69,8 +70,10 @@ func main() {
 	if err := db.ConnectMongoDB(); err != nil {
 		panic(err)
 	}
+	if err := controllers.EnsureDefaultAdminAccount(); err != nil {
+		panic(err)
+	}
 
-	
 	// ============================================================
 	// SWAGGER
 	// ============================================================
@@ -83,6 +86,10 @@ func main() {
 
 	router.POST("/register", routes.RegisterRoute)
 	router.POST("/login", routes.LoginRoute)
+	router.POST("/admin/login", routes.AdminLoginRoute)
+	router.POST("/admin/forgot-password", routes.AdminForgotPasswordRoute)
+	router.POST("/admin/reset-password", routes.AdminResetPasswordRoute)
+	router.GET("/privacy-policy", routes.PrivacyPolicyRoute)
 	router.POST("/verify-otp", routes.VerifyOTPRoute)
 	router.POST("/resend-otp", routes.ResendOTPRoute)
 	router.POST("/forgot-password", routes.ForgotPasswordRoute)
@@ -100,6 +107,16 @@ func main() {
 
 	authGroup := router.Group("/api")
 	authGroup.Use(middleware.JWTAuth())
+
+	// Admin routes
+	adminGroup := authGroup.Group("/admin")
+	adminGroup.Use(middleware.RequireAdmin())
+	adminGroup.GET("/dashboard", routes.AdminDashboardRoute)
+	adminGroup.GET("/users", routes.AdminUsersRoute)
+	adminGroup.GET("/users/:email", routes.AdminUserDetailRoute)
+	adminGroup.PATCH("/users/:email", routes.AdminUpdateUserRoute)
+	adminGroup.DELETE("/users/:email", routes.AdminDeleteUserRoute)
+	adminGroup.GET("/alerts", routes.AdminAlertsRoute)
 
 	// Investigation
 	authGroup.POST("/investigate", routes.InvestigateRoute)

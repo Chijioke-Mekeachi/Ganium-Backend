@@ -18,6 +18,7 @@ type jwtHeader struct {
 
 type jwtClaims struct {
 	Email string `json:"email"`
+	Role  string `json:"role"`
 	Exp   int64  `json:"exp"`
 	Iat   int64  `json:"iat"`
 }
@@ -35,9 +36,21 @@ func base64URL(data []byte) string {
 }
 
 func GenerateJWT(email string) (string, error) {
+	return GenerateJWTWithRole(email, "user")
+}
+
+func GenerateJWTWithRole(email, role string) (string, error) {
+	if strings.TrimSpace(email) == "" {
+		return "", errors.New("email is required")
+	}
+	if strings.TrimSpace(role) == "" {
+		role = "user"
+	}
+
 	header := jwtHeader{Alg: "HS256", Typ: "JWT"}
 	claims := jwtClaims{
 		Email: email,
+		Role:  role,
 		Exp:   time.Now().Add(24 * time.Hour).Unix(),
 		Iat:   time.Now().Unix(),
 	}
@@ -89,6 +102,7 @@ func ValidateJWT(tokenString string) (map[string]any, error) {
 
 	return map[string]any{
 		"email": claims.Email,
+		"role":  claims.Role,
 		"exp":   claims.Exp,
 		"iat":   claims.Iat,
 	}, nil

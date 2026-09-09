@@ -10,8 +10,8 @@ import (
 	"ganium/src/db"
 	"ganium/src/models"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -131,6 +131,13 @@ func DeleteCurrentUser(email string) error {
 	if result.DeletedCount == 0 {
 		return fmt.Errorf("user not found")
 	}
+
+	_ = LogAdminEvent(
+		"user_deleted",
+		"User deleted",
+		fmt.Sprintf("User account %s was deleted.", email),
+		email,
+	)
 
 	// Redis cache invalidation removed
 

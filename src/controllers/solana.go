@@ -299,6 +299,42 @@ func SJLYTreasuryWallet() string {
 	)
 }
 
+func SupportedCryptoTokenSymbols() []string {
+	return []string{"SJLY", "USDT", "USDC"}
+}
+
+func NormalizeCryptoTokenSymbol(token string) string {
+	symbol := strings.ToUpper(strings.TrimSpace(token))
+	switch symbol {
+	case "USDT", "USDC", "SJLY":
+		return symbol
+	default:
+		return "SJLY"
+	}
+}
+
+func GaniumCryptoTreasuryWallet() string {
+	if wallet := strings.TrimSpace(os.Getenv("GANIUM_CRYPTO_WALLET")); wallet != "" {
+		return wallet
+	}
+	if wallet := strings.TrimSpace(os.Getenv("SJLY_TREASURY_WALLET")); wallet != "" {
+		return wallet
+	}
+	return GaniumSolanaWallet()
+}
+
+func MintAddressForCryptoToken(token string) string {
+	symbol := NormalizeCryptoTokenSymbol(token)
+	switch symbol {
+	case "USDT":
+		return strings.TrimSpace(os.Getenv("USDT_MINT_ADDRESS"))
+	case "USDC":
+		return strings.TrimSpace(os.Getenv("USDC_MINT_ADDRESS"))
+	default:
+		return strings.TrimSpace(os.Getenv("SJLY_MINT_ADDRESS"))
+	}
+}
+
 // ============================================================
 // CONFIGURATION
 // ============================================================

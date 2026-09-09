@@ -15,6 +15,7 @@ type Register struct {
 	Email            string `json:"email" bson:"email"`
 	Password         string `json:"password" bson:"password"`
 	FullName         string `json:"full_name,omitempty" bson:"full_name,omitempty"`
+	Role             string `json:"role,omitempty" bson:"role,omitempty"`
 	IsVerified       bool   `json:"isVerified" bson:"isVerified"`
 	OTPHash          string `json:"otpHash,omitempty" bson:"otpHash,omitempty"`
 	OTPExpiry        int64  `json:"otpExpiry,omitempty" bson:"otpExpiry,omitempty"`

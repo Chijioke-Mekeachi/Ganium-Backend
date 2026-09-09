@@ -39,7 +39,8 @@ type PaystackVerifyRequest struct {
 
 // CreateCryptoPaymentRequest creates a new SJLY payment intent.
 type CreateCryptoPaymentRequest struct {
-	Plan string `json:"plan" example:"pro"`
+	Plan  string `json:"plan" example:"pro"`
+	Token string `json:"token,omitempty" example:"USDT"`
 }
 
 // SubmitCryptoPaymentRequest submits the Solana transaction
