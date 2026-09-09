@@ -7,6 +7,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -300,11 +301,9 @@ func ResolvePaymentPlan(
 	code string,
 ) (models.PaymentPlan, bool) {
 
-	plan, ok := paymentPlans[
-		strings.ToLower(
-			strings.TrimSpace(code),
-		),
-	]
+	plan, ok := paymentPlans[strings.ToLower(
+		strings.TrimSpace(code),
+	)]
 
 	return plan, ok
 }
@@ -493,19 +492,19 @@ func InitializePaymentForPlan(
 
 			bson.M{
 				"$set": bson.M{
-					"reference":        provider.Data.Reference,
-					"email":            email,
-					"plan":             plan.Code,
-					"amount":           ngnAmount,
-					"currency":         "NGN",
-					"tokens_granted":   plan.Tokens,
-					"status":           "initialized",
-					"channel":          mode,
+					"reference":         provider.Data.Reference,
+					"email":             email,
+					"plan":              plan.Code,
+					"amount":            ngnAmount,
+					"currency":          "NGN",
+					"tokens_granted":    plan.Tokens,
+					"status":            "initialized",
+					"channel":           mode,
 					"authorization_url": provider.Data.AuthorizationURL,
-					"access_code":      provider.Data.AccessCode,
-					"created_at":       now,
-					"updated_at":       now,
-					"credited":         false,
+					"access_code":       provider.Data.AccessCode,
+					"created_at":        now,
+					"updated_at":        now,
+					"credited":          false,
 				},
 			},
 
@@ -528,10 +527,10 @@ func InitializePaymentForPlan(
 		AccessCode:       provider.Data.AccessCode,
 		Reference:        provider.Data.Reference,
 		CheckoutMode:     mode,
-		Amount:            ngnAmount,
-		Currency:          "NGN",
-		TokensGranted:     plan.Tokens,
-		Plan:              plan.Code,
+		Amount:           ngnAmount,
+		Currency:         "NGN",
+		TokensGranted:    plan.Tokens,
+		Plan:             plan.Code,
 	}
 
 	if mode == "inline" {
@@ -873,20 +872,20 @@ func VerifyPaymentAndCredit(
 
 			bson.M{
 				"$set": bson.M{
-					"reference":          reference,
-					"email":              email,
-					"plan":               plan.Code,
-					"amount":             plan.Amount,
-					"currency":           provider.Data.Currency,
-					"tokens_granted":     plan.Tokens,
-					"status":             "success",
-					"channel":            provider.Data.Channel,
-					"authorization_url":  existing.AuthorizationURL,
-					"access_code":        existing.AccessCode,
-					"updated_at":         now,
-					"paid_at":             paidAt,
-					"raw_event":           provider.Message,
-					"credited":            true,
+					"reference":         reference,
+					"email":             email,
+					"plan":              plan.Code,
+					"amount":            plan.Amount,
+					"currency":          provider.Data.Currency,
+					"tokens_granted":    plan.Tokens,
+					"status":            "success",
+					"channel":           provider.Data.Channel,
+					"authorization_url": existing.AuthorizationURL,
+					"access_code":       existing.AccessCode,
+					"updated_at":        now,
+					"paid_at":           paidAt,
+					"raw_event":         provider.Message,
+					"credited":          true,
 				},
 			},
 		)
@@ -923,20 +922,20 @@ func VerifyPaymentAndCredit(
 		Reference:        reference,
 		Email:            email,
 		Plan:             plan.Code,
-		Amount:            plan.Amount,
-		Currency:          provider.Data.Currency,
-		TokensGranted:     plan.Tokens,
-		Status:            "success",
-		Channel:           provider.Data.Channel,
+		Amount:           plan.Amount,
+		Currency:         provider.Data.Currency,
+		TokensGranted:    plan.Tokens,
+		Status:           "success",
+		Channel:          provider.Data.Channel,
 		AuthorizationURL: existing.AuthorizationURL,
-		AccessCode:        existing.AccessCode,
-		CreatedAt:         existing.CreatedAt,
-		UpdatedAt:         now,
-		PaidAt:            paidAt,
-		RawEvent:          provider.Message,
-		Credited:          true,
+		AccessCode:       existing.AccessCode,
+		CreatedAt:        existing.CreatedAt,
+		UpdatedAt:        now,
+		PaidAt:           paidAt,
+		RawEvent:         provider.Message,
+		Credited:         true,
 	}
-		if !provider.Status {
+	if !provider.Status {
 		if existing.Email != "" {
 			_ = CreateNotification(
 				existing.Email,
@@ -953,7 +952,7 @@ func VerifyPaymentAndCredit(
 				provider.Message,
 			)
 	}
-		if !strings.EqualFold(
+	if !strings.EqualFold(
 		provider.Data.Status,
 		"success",
 	) {
@@ -1057,6 +1056,120 @@ func GetPaymentHistory(
 }
 
 // ============================================================
+// SJLY CRYPTO PAYMENT ALIASES
+// ============================================================
+
+func CreateSJLYPayment(
+	email,
+	planCode string,
+) (*models.CreateCryptoPaymentResponse, error) {
+	return CreateCryptoTokenPayment(
+		email,
+		planCode,
+		"SJLY",
+	)
+}
+
+func SaveCryptoPaymentSignature(
+	paymentID,
+	signature,
+	userWallet string,
+) (*models.CryptoPayment, error) {
+	paymentID = strings.TrimSpace(paymentID)
+	signature = strings.TrimSpace(signature)
+	userWallet = strings.TrimSpace(userWallet)
+
+	if paymentID == "" {
+		return nil, fmt.Errorf("payment_id is required")
+	}
+
+	if signature == "" {
+		return nil, fmt.Errorf("signature is required")
+	}
+
+	if userWallet == "" {
+		return nil, fmt.Errorf("user_wallet is required")
+	}
+
+	collection := db.MongoClient.
+		Database(db.DatabaseName).
+		Collection("crypto_payments")
+
+	var payment models.CryptoPayment
+
+	err := collection.FindOne(
+		context.Background(),
+		bson.M{"payment_id": paymentID},
+	).Decode(&payment)
+
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, fmt.Errorf("payment not found")
+		}
+
+		return nil, fmt.Errorf("failed to load payment: %w", err)
+	}
+
+	now := time.Now().UTC()
+
+	_, err = collection.UpdateOne(
+		context.Background(),
+		bson.M{"payment_id": paymentID},
+		bson.M{
+			"$set": bson.M{
+				"user_wallet":            userWallet,
+				"transaction_signature":  signature,
+				"status":                 "verifying",
+				"updated_at":             now,
+				"verification_submitted": true,
+			},
+		},
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to save payment signature: %w", err)
+	}
+
+	payment.UserWallet = userWallet
+	payment.TransactionSignature = signature
+	payment.Status = "verifying"
+	payment.UpdatedAt = now
+
+	return &payment, nil
+}
+
+func GetCryptoPayment(
+	paymentID string,
+) (*models.CryptoPayment, error) {
+	paymentID = strings.TrimSpace(paymentID)
+
+	if paymentID == "" {
+		return nil, fmt.Errorf("payment_id is required")
+	}
+
+	var payment models.CryptoPayment
+
+	err := db.MongoClient.
+		Database(db.DatabaseName).
+		Collection("crypto_payments").
+		FindOne(
+			context.Background(),
+			bson.M{"payment_id": paymentID},
+		).
+		Decode(&payment)
+
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, fmt.Errorf("payment not found")
+		}
+
+		return nil, fmt.Errorf("failed to fetch payment: %w", err)
+	}
+
+	return &payment, nil
+}
+
+// ============================================================
 // GENERAL CRYPTO PAYMENT CREATION
 // ============================================================
 
@@ -1141,4 +1254,158 @@ func CreateCryptoTokenPayment(
 		Status:          payment.Status,
 		CreatedAt:       payment.CreatedAt,
 	}, nil
+}
+
+// ============================================================
+// CRYPTO PAYMENT COMPLETE
+// ============================================================
+
+func CompleteCryptoPayment(
+	paymentID string,
+) (*models.CryptoPayment, string, error) {
+	paymentID = strings.TrimSpace(paymentID)
+
+	if paymentID == "" {
+		return nil, "payment ID is required", errors.New("missing payment ID")
+	}
+
+	ctx := context.Background()
+
+	var payment models.CryptoPayment
+
+	err := db.MongoClient.
+		Database(db.DatabaseName).
+		Collection("crypto_payments").
+		FindOne(
+			ctx,
+			bson.M{
+				"payment_id": paymentID,
+			},
+		).
+		Decode(&payment)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, "payment not found", fmt.Errorf("payment %s does not exist", paymentID)
+		}
+
+		return nil, "failed to find payment", fmt.Errorf("failed to find payment %s: %w", paymentID, err)
+	}
+
+	if payment.Credited {
+		return &payment, "payment already completed", nil
+	}
+
+	// Check if the payment is still pending
+	if payment.Status != "pending" {
+		return &payment, "payment is not pending", fmt.Errorf("payment %s is not in pending status", paymentID)
+	}
+
+	// ========================================================
+	// 1. Find the corresponding user by email
+	// ========================================================
+
+	var user bson.M
+
+	err = db.MongoClient.
+		Database(db.DatabaseName).
+		Collection("users").
+		FindOne(
+			ctx,
+			bson.M{
+				"email": payment.Email,
+			},
+		).
+		Decode(&user)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, "user not found", fmt.Errorf("no user found with email %q", payment.Email)
+		}
+
+		return nil, "failed to find user", fmt.Errorf("failed to find user %q: %w", payment.Email, err)
+	}
+
+	// ========================================================
+	// 2. Credit the user
+	// ========================================================
+
+	now := time.Now().UTC()
+
+	updateResult, err := db.MongoClient.
+		Database(db.DatabaseName).
+		Collection("users").
+		UpdateOne(
+			ctx,
+
+			bson.M{
+				"email": payment.Email,
+			},
+
+			bson.M{
+				"$inc": bson.M{
+					"tokens_remaining": payment.TokensGranted,
+					"wallet_balance":   payment.USDPrice,
+				},
+
+				"$set": bson.M{
+					"updated_at": now,
+				},
+			},
+		)
+
+	if err != nil {
+		return nil, "failed to credit tokens", fmt.Errorf("failed to update user %q: %w", payment.Email, err)
+	}
+
+	// ========================================================
+	// 3. Ensure Mongo actually matched the user
+	// ========================================================
+
+	if updateResult.MatchedCount == 0 {
+		return nil, "user was not credited", fmt.Errorf("MongoDB matched 0 users for email %q", payment.Email)
+	}
+
+	// ========================================================
+	// 4. Mark payment as completed
+	// ========================================================
+
+	_, err = db.MongoClient.
+		Database(db.DatabaseName).
+		Collection("crypto_payments").
+		UpdateOne(
+			ctx,
+
+			bson.M{
+				"payment_id": paymentID,
+			},
+
+			bson.M{
+				"$set": bson.M{
+					"status":     "completed",
+					"credited":   true,
+					"updated_at": now,
+				},
+			},
+		)
+
+	if err != nil {
+		return nil, "failed to update payment status", fmt.Errorf("failed to update payment status for %s: %w", paymentID, err)
+	}
+
+	// ========================================================
+	// 5. Return success
+	// ========================================================
+
+	payment.Status = "completed"
+	payment.Credited = true
+
+	_ = CreateNotification(
+		payment.Email,
+		"Payment successful",
+		fmt.Sprintf("Your payment (ID: %s) was successful. %d tokens have been added to your wallet.", payment.PaymentID, payment.TokensGranted),
+		"payment_success",
+	)
+
+	return &payment, "payment completed successfully", nil
 }
