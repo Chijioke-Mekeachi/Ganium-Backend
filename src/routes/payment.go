@@ -46,9 +46,9 @@ type CreateCryptoPaymentRequest struct {
 // SubmitCryptoPaymentRequest submits the Solana transaction
 // signature after the user signs the transaction in their wallet.
 type SubmitCryptoPaymentRequest struct {
-	PaymentID   string `json:"payment_id" example:"GAN-SJLY-123456789"`
-	Signature   string `json:"signature" example:"5abc123..."`
-	UserWallet  string `json:"user_wallet" example:"7abc123..."`
+	PaymentID  string `json:"payment_id" example:"GAN-SJLY-123456789"`
+	Signature  string `json:"signature" example:"5abc123..."`
+	UserWallet string `json:"user_wallet" example:"7abc123..."`
 }
 
 // ============================================================
@@ -770,13 +770,18 @@ func CryptoPaymentStatusRoute(c *gin.Context) {
 // CRYPTO PAYMENT STREAM
 // ============================================================
 
-// CryptoPaymentStreamRoute streams the SJLY payment status
-// to React Native using Server-Sent Events.
-//
-// NOTE:
-// React Native does not have native browser EventSource
-// behavior on every setup, so later we can also expose this
-// through polling or WebSocket if necessary.
+// CryptoPaymentStreamRoute godoc
+// @Summary Stream crypto payment status
+// @Description Streams the SJLY payment status using Server-Sent Events.
+// @Tags Crypto Payments
+// @Produce text/event-stream
+// @Security BearerAuth
+// @Param payment_id query string true "Crypto payment ID"
+// @Success 200 {string} string
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /api/crypto/payment/stream [get]
 func CryptoPaymentStreamRoute(c *gin.Context) {
 
 	email := c.GetString("email")
@@ -851,7 +856,7 @@ func CryptoPaymentStreamRoute(c *gin.Context) {
 	send(
 		"connected",
 		gin.H{
-			"status": "connected",
+			"status":     "connected",
 			"payment_id": paymentID,
 		},
 	)
@@ -907,11 +912,11 @@ func CryptoPaymentStreamRoute(c *gin.Context) {
 			send(
 				"payment",
 				gin.H{
-					"payment_id": payment.PaymentID,
-					"status": payment.Status,
-					"signature": payment.TransactionSignature,
+					"payment_id":     payment.PaymentID,
+					"status":         payment.Status,
+					"signature":      payment.TransactionSignature,
 					"tokens_granted": payment.TokensGranted,
-					"credited": payment.Credited,
+					"credited":       payment.Credited,
 				},
 			)
 
@@ -923,4 +928,3 @@ func CryptoPaymentStreamRoute(c *gin.Context) {
 		}
 	}
 }
-

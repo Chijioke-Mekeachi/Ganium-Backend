@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -37,32 +39,65 @@ func AdminLogin(email, password string) (bool, string, string) {
 		return false, "admin email and password are required", ""
 	}
 
+	// Allow explicit ADMIN_EMAIL/ADMIN_PASSWORD env override even if a user exists
+	envEmail := strings.TrimSpace(os.Getenv("ADMIN_EMAIL"))
+	envPassword := strings.TrimSpace(os.Getenv("ADMIN_PASSWORD"))
+	if envEmail == email && envPassword != "" && envPassword == password {
+		token, jwtErr := utils.GenerateJWTWithRole(email, "admin")
+		if jwtErr != nil {
+			fmt.Printf("AdminLogin: failed to generate token for env admin %s: %v\n", email, jwtErr)
+			return false, "failed to generate admin token", ""
+		}
+		fmt.Printf("AdminLogin: env admin login successful for %s (env override)\n", email)
+		return true, "admin login successful", token
+	}
+
 	collection := db.MongoClient.Database(db.DatabaseName).Collection("users")
 	var user bson.M
 	if err := collection.FindOne(context.Background(), bson.M{"email": email}).Decode(&user); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
+			fmt.Printf("AdminLogin: user not found for email=%s, falling back to env vars\n", email)
 			envEmail := strings.TrimSpace(os.Getenv("ADMIN_EMAIL"))
 			envPassword := strings.TrimSpace(os.Getenv("ADMIN_PASSWORD"))
 			if envEmail == email && envPassword != "" && envPassword == password {
 				token, jwtErr := utils.GenerateJWTWithRole(email, "admin")
 				if jwtErr != nil {
+					fmt.Printf("AdminLogin: failed to generate token for env admin %s: %v\n", email, jwtErr)
 					return false, "failed to generate admin token", ""
 				}
+				fmt.Printf("AdminLogin: env admin login successful for %s\n", email)
 				return true, "admin login successful", token
 			}
+			fmt.Printf("AdminLogin: invalid credentials for env/admin fallback email=%s\n", email)
 			return false, "invalid admin credentials", ""
 		}
+		fmt.Printf("AdminLogin: database error while finding user %s: %v\n", email, err)
 		return false, "database error", ""
 	}
 
 	role, _ := user["role"].(string)
 	isAdmin, _ := user["is_admin"].(bool)
+	fmt.Printf("AdminLogin: found user email=%s role=%v is_admin=%v\n", email, role, isAdmin)
 	if role != "admin" && !isAdmin {
+		fmt.Printf("AdminLogin: user %s is not admin (role=%v is_admin=%v)\n", email, role, isAdmin)
 		return false, "invalid admin credentials", ""
 	}
 
 	storedPassword, _ := user["password"].(string)
+	// Debug: print stored password summary and SHA256 of provided password
+	prefix := ""
+	if len(storedPassword) > 6 {
+		prefix = storedPassword[:6]
+	} else {
+		prefix = storedPassword
+	}
+	sha := sha256.Sum256([]byte(password))
+	shaHex := hex.EncodeToString(sha[:])
+	fmt.Printf("AdminLogin: storedPassword_len=%d prefix=%s provided_password_sha256=%s\n", len(storedPassword), prefix, shaHex)
+	fmt.Printf("AdminLogin: storedPassword_full=%s\n", storedPassword)
+
 	if !utils.CheckPassword(password, storedPassword) {
+		fmt.Printf("AdminLogin: password mismatch for %s\n", email)
 		return false, "invalid admin credentials", ""
 	}
 
@@ -71,6 +106,7 @@ func AdminLogin(email, password string) (bool, string, string) {
 		return false, "failed to generate admin token", ""
 	}
 
+	fmt.Printf("AdminLogin: login successful for %s\n", email)
 	return true, "admin login successful", token
 }
 
