@@ -49,6 +49,12 @@ import (
 // @tag.name Paystack
 // @tag.description Payment and subscription endpoints.
 //
+// @tag.name Crypto Payments
+// @tag.description Solana/SJLY cryptocurrency payment endpoints.
+//
+// @tag.name Admin
+// @tag.description Admin-only dashboard and user management endpoints.
+//
 // @tag.name Users
 // @tag.description Authenticated user profile and account management.
 //
@@ -79,6 +85,12 @@ func main() {
 	// ============================================================
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Serve admin UI (single-page app)
+	router.Static("/admin/static", "./web/admin")
+	router.GET("/admin", func(c *gin.Context) {
+		c.File("./web/admin/index.html")
+	})
 
 	// ============================================================
 	// PUBLIC AUTHENTICATION ROUTES

@@ -18,6 +18,15 @@ definitions:
         example: NewPassword123!
         type: string
     type: object
+  models.NotificationUpdateRequest:
+    properties:
+      message:
+        example: Your advanced scan finished with a suspicious verdict.
+        type: string
+      title:
+        example: Scan complete
+        type: string
+    type: object
   models.PaymentPlan:
     properties:
       amount:
@@ -93,6 +102,15 @@ definitions:
         type: boolean
       last_scan_at:
         type: string
+      solana_network:
+        type: string
+      solana_wallet_address:
+        description: Solana
+        type: string
+      solana_wallet_connected:
+        type: boolean
+      solana_wallet_connected_at:
+        type: string
       subscription_plan_id:
         type: string
       subscription_status:
@@ -119,6 +137,15 @@ definitions:
     properties:
       email:
         type: string
+      solana_network:
+        type: string
+      solana_wallet_address:
+        description: Solana
+        type: string
+      solana_wallet_connected:
+        type: boolean
+      solana_wallet_connected_at:
+        type: string
       token_rate_per_usd:
         example: 10
         type: integer
@@ -134,6 +161,33 @@ definitions:
       wallet_balance:
         type: number
     type: object
+  routes.AdminForgotPasswordRequest:
+    properties:
+      email:
+        example: admin@ganium.ai
+        type: string
+    type: object
+  routes.AdminLoginRequest:
+    properties:
+      email:
+        example: admin@ganium.ai
+        type: string
+      password:
+        example: StrongPassword123!
+        type: string
+    type: object
+  routes.AdminResetPasswordRequest:
+    properties:
+      email:
+        example: admin@ganium.ai
+        type: string
+      newPassword:
+        example: NewPassword123!
+        type: string
+      otp:
+        example: "123456"
+        type: string
+    type: object
   routes.AdvanceScanRequest:
     properties:
       content:
@@ -147,10 +201,20 @@ definitions:
         example: Your account will be suspended unless you confirm your password now.
         type: string
     type: object
+  routes.ConnectSolanaWalletRequest:
+    properties:
+      network:
+        type: string
+      wallet_address:
+        type: string
+    type: object
   routes.CreateCryptoPaymentRequest:
     properties:
       plan:
         example: pro
+        type: string
+      token:
+        example: USDT
         type: string
     type: object
   routes.ForgotPasswordRequest:
@@ -300,6 +364,302 @@ info:
   title: Ganium API
   version: "1.0"
 paths:
+  /admin/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Starts the password recovery process for an admin account.
+      parameters:
+      - description: Admin email
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.AdminForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Admin forgot password
+      tags:
+      - Authentication
+  /admin/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates an administrator and returns a JWT token.
+      parameters:
+      - description: Admin login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.AdminLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Admin login
+      tags:
+      - Authentication
+  /admin/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Resets an admin password using a valid OTP.
+      parameters:
+      - description: Admin reset details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.AdminResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Admin reset password
+      tags:
+      - Authentication
+  /api/admin/alerts:
+    get:
+      description: Returns recent security and account alerts for the admin overview.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get admin alerts
+      tags:
+      - Admin
+  /api/admin/dashboard:
+    get:
+      description: Returns the administrator dashboard summary and alert metrics.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get admin dashboard
+      tags:
+      - Admin
+  /api/admin/users:
+    get:
+      description: Returns all registered users for the platform admin.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - Admin
+  /api/admin/users/{email}:
+    delete:
+      description: Deletes a user account from the admin panel.
+      parameters:
+      - description: User email
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - Admin
+    get:
+      description: Returns the profile and account details for a single user.
+      parameters:
+      - description: User email
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user details
+      tags:
+      - Admin
+    patch:
+      consumes:
+      - application/json
+      description: Updates a user's profile data from the admin console.
+      parameters:
+      - description: User email
+        in: path
+        name: email
+        required: true
+        type: string
+      - description: User fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user details
+      tags:
+      - Admin
   /api/balance:
     get:
       description: Returns the current wallet balance together with the token pricing
@@ -403,6 +763,45 @@ paths:
       security:
       - BearerAuth: []
       summary: Get crypto payment status
+      tags:
+      - Crypto Payments
+  /api/crypto/payment/stream:
+    get:
+      description: Streams the SJLY payment status using Server-Sent Events.
+      parameters:
+      - description: Crypto payment ID
+        in: query
+        name: payment_id
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Stream crypto payment status
       tags:
       - Crypto Payments
   /api/crypto/payment/submit:
@@ -583,6 +982,164 @@ paths:
       summary: Update current user profile
       tags:
       - Users
+  /api/notifications:
+    get:
+      description: Returns all notifications belonging to the authenticated user,
+        newest first.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List notifications
+      tags:
+      - Notifications
+  /api/notifications/{id}:
+    delete:
+      description: Deletes a single notification belonging to the authenticated user.
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a notification
+      tags:
+      - Notifications
+    patch:
+      consumes:
+      - application/json
+      description: Updates editable fields on a notification belonging to the authenticated
+        user.
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Notification update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.NotificationUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a notification
+      tags:
+      - Notifications
+  /api/notifications/{id}/read:
+    patch:
+      description: Marks a single notification as read for the authenticated user.
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mark a notification as read
+      tags:
+      - Notifications
   /api/paystack/callback:
     get:
       description: Handles Paystack payment callback.
@@ -1136,6 +1693,99 @@ paths:
       summary: Get wallet summary
       tags:
       - Wallet
+  /api/wallet/solana/connect:
+    post:
+      consumes:
+      - application/json
+      description: Connects the authenticated user's Solana wallet.
+      parameters:
+      - description: Solana wallet
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/routes.ConnectSolanaWalletRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Connect Solana wallet
+      tags:
+      - Wallet
+  /api/wallet/solana/disconnect:
+    post:
+      description: Disconnects the authenticated user's Solana wallet.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Disconnect Solana wallet
+      tags:
+      - Wallet
+  /api/wallet/solana/status:
+    get:
+      description: Returns the authenticated user's connected Solana wallet.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get Solana wallet status
+      tags:
+      - Wallet
   /forgot-password:
     post:
       consumes:
@@ -1236,6 +1886,20 @@ paths:
       summary: Paystack webhook
       tags:
       - Paystack
+  /privacy-policy:
+    get:
+      description: Returns the public privacy policy for the Ganium platform.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get privacy policy
+      tags:
+      - Authentication
   /register:
     post:
       consumes:
