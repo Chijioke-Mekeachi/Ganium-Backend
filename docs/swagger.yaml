@@ -692,7 +692,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a pending SJLY payment intent.
+      description: Creates a pending crypto payment intent for SJLY, USDT, or USDC.
       parameters:
       - description: Crypto payment
         in: body
@@ -722,12 +722,12 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Create SJLY payment
+      summary: Create crypto payment
       tags:
       - Crypto Payments
   /api/crypto/payment/status:
     get:
-      description: Returns the current status of an SJLY payment.
+      description: Returns the current status of a crypto payment.
       parameters:
       - description: Crypto payment ID
         in: query
@@ -767,7 +767,7 @@ paths:
       - Crypto Payments
   /api/crypto/payment/stream:
     get:
-      description: Streams the SJLY payment status using Server-Sent Events.
+      description: Streams the crypto payment status using Server-Sent Events.
       parameters:
       - description: Crypto payment ID
         in: query
@@ -808,7 +808,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Saves the Solana transaction signature for verification.
+      description: Saves the Solana transaction signature for verification of a crypto payment.
       parameters:
       - description: Transaction
         in: body
@@ -838,7 +838,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Submit SJLY transaction
+      summary: Submit crypto transaction
       tags:
       - Crypto Payments
   /api/investigate:

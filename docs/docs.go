@@ -530,7 +530,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a pending SJLY payment intent.",
+                "description": "Creates a pending crypto payment intent for SJLY, USDT, or USDC.",
                 "consumes": [
                     "application/json"
                 ],
@@ -540,7 +540,7 @@ const docTemplate = `{
                 "tags": [
                     "Crypto Payments"
                 ],
-                "summary": "Create SJLY payment",
+                "summary": "Create crypto payment",
                 "parameters": [
                     {
                         "description": "Crypto payment",
