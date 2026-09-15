@@ -42,7 +42,7 @@ func JWTAuth() gin.HandlerFunc {
 func RequireAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role := strings.ToLower(c.GetString("role"))
-		if role != "admin" && role != "super_admin" {
+		if role != "admin" && role != "super_admin" && role != "support" && role != "support_agent" {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"msg": "admin access required"})
 			return
 		}

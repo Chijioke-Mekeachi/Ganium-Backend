@@ -55,6 +55,9 @@ import (
 // @tag.name Admin
 // @tag.description Admin-only dashboard and user management endpoints.
 //
+// @tag.name Support
+// @tag.description Customer service and admin support chat endpoints.
+//
 // @tag.name Users
 // @tag.description Authenticated user profile and account management.
 //
@@ -74,6 +77,9 @@ func main() {
 
 	// Connect to MongoDB.
 	if err := db.ConnectMongoDB(); err != nil {
+		panic(err)
+	}
+	if err := controllers.EnsureSupportIndexes(); err != nil {
 		panic(err)
 	}
 	if err := controllers.EnsureDefaultAdminAccount(); err != nil {
@@ -148,6 +154,18 @@ func main() {
 	authGroup.DELETE("/me", routes.DeleteMeRoute)
 	authGroup.GET("/wallet", routes.WalletRoute)
 	authGroup.GET("/balance", routes.BalanceRoute)
+
+	// Support chat
+	authGroup.POST("/support/conversations", routes.CreateSupportConversationRoute)
+	authGroup.GET("/support/conversations", routes.GetSupportConversationsRoute)
+	authGroup.GET("/support/conversations/:conversationId", routes.GetSupportConversationRoute)
+	authGroup.GET("/support/conversations/:conversationId/messages", routes.GetSupportConversationMessagesRoute)
+	authGroup.POST("/support/conversations/:conversationId/messages", routes.SendSupportMessageRoute)
+	authGroup.POST("/support/conversations/:conversationId/close", routes.CloseSupportConversationRoute)
+	adminGroup.GET("/support/conversations", routes.AdminListSupportConversationsRoute)
+	adminGroup.GET("/support/conversations/:conversationId", routes.AdminGetSupportConversationRoute)
+	adminGroup.POST("/support/conversations/:conversationId/messages", routes.AdminSendSupportReplyRoute)
+	adminGroup.PATCH("/support/conversations/:conversationId", routes.AdminUpdateSupportConversationRoute)
 
 	// PDF
 	authGroup.POST("/receipt/pdf", routes.ReceiptPDFRoute)

@@ -37,7 +37,7 @@ type PaystackVerifyRequest struct {
 // SOLANA / SJLY REQUEST MODELS
 // ============================================================
 
-// CreateCryptoPaymentRequest creates a new SJLY payment intent.
+// CreateCryptoPaymentRequest creates a new crypto payment intent for SJLY, USDT, or USDC.
 type CreateCryptoPaymentRequest struct {
 	Plan  string `json:"plan" example:"pro"`
 	Token string `json:"token,omitempty" example:"USDT"`
@@ -544,8 +544,8 @@ func PaystackPaymentStreamRoute(c *gin.Context) {
 // ------------------------------------------------------------
 
 // CreateCryptoPaymentRoute godoc
-// @Summary Create SJLY payment
-// @Description Creates a pending SJLY payment intent.
+// @Summary Create crypto payment
+// @Description Creates a pending crypto payment intent for SJLY, USDT, or USDC.
 // @Tags Crypto Payments
 // @Accept json
 // @Produce json
@@ -586,9 +586,10 @@ func CreateCryptoPaymentRoute(c *gin.Context) {
 	}
 
 	payment, err :=
-		controllers.CreateSJLYPayment(
+		controllers.CreateCryptoTokenPayment(
 			email,
 			plan,
+			controllers.NormalizeCryptoTokenSymbol(payload.Token),
 		)
 
 	if err != nil {
@@ -611,8 +612,8 @@ func CreateCryptoPaymentRoute(c *gin.Context) {
 // ============================================================
 
 // SubmitCryptoPaymentRoute godoc
-// @Summary Submit SJLY transaction
-// @Description Saves the Solana transaction signature for verification.
+// @Summary Submit crypto transaction
+// @Description Saves the Solana transaction signature for verification of a crypto payment.
 // @Tags Crypto Payments
 // @Accept json
 // @Produce json
@@ -704,7 +705,7 @@ func SubmitCryptoPaymentRoute(c *gin.Context) {
 
 // CryptoPaymentStatusRoute godoc
 // @Summary Get crypto payment status
-// @Description Returns the current status of an SJLY payment.
+// @Description Returns the current status of a crypto payment.
 // @Tags Crypto Payments
 // @Produce json
 // @Security BearerAuth
@@ -772,7 +773,7 @@ func CryptoPaymentStatusRoute(c *gin.Context) {
 
 // CryptoPaymentStreamRoute godoc
 // @Summary Stream crypto payment status
-// @Description Streams the SJLY payment status using Server-Sent Events.
+// @Description Streams the crypto payment status using Server-Sent Events.
 // @Tags Crypto Payments
 // @Produce text/event-stream
 // @Security BearerAuth
