@@ -9,6 +9,15 @@ definitions:
       wallet:
         $ref: '#/definitions/models.WalletSummary'
     type: object
+  models.CreateSupportConversationRequest:
+    properties:
+      message:
+        example: My payment was completed but my tokens were not added.
+        type: string
+      subject:
+        example: Payment problem
+        type: string
+    type: object
   models.Login:
     properties:
       email:
@@ -84,6 +93,53 @@ definitions:
         type: string
       password:
         example: NewPassword123!
+        type: string
+    type: object
+  models.SupportConversation:
+    properties:
+      assignedTo:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      lastMessageAt:
+        type: string
+      status:
+        type: string
+      subject:
+        type: string
+      updatedAt:
+        type: string
+      userId:
+        type: string
+    type: object
+  models.SupportConversationListResponse:
+    properties:
+      conversations:
+        items:
+          $ref: '#/definitions/models.SupportConversation'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  models.SupportConversationUpdateRequest:
+    properties:
+      assignedTo:
+        example: 64d8e0d1a29b3d4a9f3401aa
+        type: string
+      status:
+        example: pending
+        type: string
+    type: object
+  models.SupportMessageRequest:
+    properties:
+      message:
+        example: I have attached the payment reference.
         type: string
     type: object
   models.UserProfileResponse:
@@ -164,13 +220,13 @@ definitions:
   routes.AdminForgotPasswordRequest:
     properties:
       email:
-        example: admin@ganium.ai
+        example: ganium.team@gmail.com
         type: string
     type: object
   routes.AdminLoginRequest:
     properties:
       email:
-        example: admin@ganium.ai
+        example: ganium.team@gmail.com
         type: string
       password:
         example: StrongPassword123!
@@ -179,7 +235,7 @@ definitions:
   routes.AdminResetPasswordRequest:
     properties:
       email:
-        example: admin@ganium.ai
+        example: ganium.team@gmail.com
         type: string
       newPassword:
         example: NewPassword123!
@@ -516,6 +572,202 @@ paths:
       summary: Get admin dashboard
       tags:
       - Admin
+  /api/admin/support/conversations:
+    get:
+      description: Returns customer support conversations with optional filters for
+        status, customer, assignment, date, and search.
+      parameters:
+      - description: Status
+        in: query
+        name: status
+        type: string
+      - description: Customer email or user ID
+        in: query
+        name: customer
+        type: string
+      - description: Assigned support user ID
+        in: query
+        name: assignedTo
+        type: string
+      - description: Date filter in RFC3339 format
+        in: query
+        name: date
+        type: string
+      - description: Search text
+        in: query
+        name: search
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SupportConversationListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List support conversations for admins
+      tags:
+      - Support
+  /api/admin/support/conversations/{conversationId}:
+    get:
+      description: Returns a specific support conversation and its messages to an
+        authorized support/admin user.
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: conversationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a conversation for admin support
+      tags:
+      - Support
+    patch:
+      consumes:
+      - application/json
+      description: Allows admins/support users to update conversation status or assignment.
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: conversationId
+        required: true
+        type: string
+      - description: Conversation update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SupportConversationUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update support conversation details
+      tags:
+      - Support
+  /api/admin/support/conversations/{conversationId}/messages:
+    post:
+      consumes:
+      - application/json
+      description: Allows an admin/support user to reply to a customer message in
+        the conversation.
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: conversationId
+        required: true
+        type: string
+      - description: Message details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SupportMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reply to a support conversation
+      tags:
+      - Support
   /api/admin/users:
     get:
       description: Returns all registered users for the platform admin.
@@ -808,7 +1060,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Saves the Solana transaction signature for verification of a crypto payment.
+      description: Saves the Solana transaction signature for verification of a crypto
+        payment.
       parameters:
       - description: Transaction
         in: body
@@ -1665,6 +1918,244 @@ paths:
       summary: Scan wallet
       tags:
       - Scan
+  /api/support/conversations:
+    get:
+      description: Returns the authenticated user's support conversations with pagination.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SupportConversationListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List customer support conversations
+      tags:
+      - Support
+    post:
+      consumes:
+      - application/json
+      description: Creates a new support conversation for the authenticated user and
+        stores the initial message.
+      parameters:
+      - description: Support conversation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateSupportConversationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a support conversation
+      tags:
+      - Support
+  /api/support/conversations/{conversationId}:
+    get:
+      description: Returns a single support conversation owned by the authenticated
+        user.
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: conversationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a conversation
+      tags:
+      - Support
+  /api/support/conversations/{conversationId}/close:
+    post:
+      description: Closes the authenticated user's support conversation.
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: conversationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Close a support conversation
+      tags:
+      - Support
+  /api/support/conversations/{conversationId}/messages:
+    get:
+      description: Returns all messages in the authenticated user's conversation.
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: conversationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get messages in a conversation
+      tags:
+      - Support
+    post:
+      consumes:
+      - application/json
+      description: Sends a new message from the authenticated user into their support
+        conversation.
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: conversationId
+        required: true
+        type: string
+      - description: Message details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SupportMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Send a message in a support conversation
+      tags:
+      - Support
   /api/wallet:
     get:
       description: Returns the authenticated user's token balance and wallet value.
