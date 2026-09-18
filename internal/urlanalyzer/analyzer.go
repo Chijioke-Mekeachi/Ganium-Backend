@@ -3,6 +3,7 @@ package urlanalyzer
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -120,8 +121,21 @@ func (p *Pipeline) Analyze(ctx context.Context, rawURL string) (*types.URLEviden
 			sandRes, err := p.sandbox.InspectURL(ctx, normalizedURL)
 			if err == nil && sandRes != nil {
 				evidence.Website = AnalyzeWebsiteContent(sandRes)
-				// Check redirects if status was 3xx or chain reported
-				if sandRes.StatusCode >= 300 && sandRes.StatusCode < 400 {
+
+				// Build redirect evidence from sandbox redirect chain if available
+				if len(sandRes.RedirectChain) > 0 {
+					var final string
+					for _, hop := range sandRes.RedirectChain {
+						final = hop.ToURL
+					}
+					evidence.Redirects = types.RedirectEvidence{
+						Count:            len(sandRes.RedirectChain),
+						FinalDestination: final,
+						CrossDomain:      isCrossDomain(normalizedURL, final),
+						Chain:            sandRes.RedirectChain,
+					}
+				} else if sandRes.StatusCode >= 300 && sandRes.StatusCode < 400 {
+					// Fallback single-location header handling
 					dest := sandRes.Headers["location"]
 					evidence.Redirects = types.RedirectEvidence{
 						Count:            1,
@@ -131,6 +145,12 @@ func (p *Pipeline) Analyze(ctx context.Context, rawURL string) (*types.URLEviden
 							{FromURL: normalizedURL, ToURL: dest, StatusCode: sandRes.StatusCode},
 						},
 					}
+				}
+
+				// Passive endpoint observation (safe GET/HEAD checks) for discovered resources
+				endpoints := passiveObserveEndpoints(ctx, sandRes, 6)
+				if len(endpoints) > 0 {
+					evidence.Website.ObservedEndpoints = endpoints
 				}
 			}
 		}
@@ -152,4 +172,105 @@ func isCrossDomain(from, to string) bool {
 		return false
 	}
 	return uFrom.Hostname() != uTo.Hostname()
+}
+
+// passiveObserveEndpoints performs safe, limited HEAD/GET checks against discovered
+// resource URLs (forms, scripts, links) without modifying server state.
+func passiveObserveEndpoints(ctx context.Context, res *sandbox.SandboxResult, limit int) []types.EndpointObservation {
+	if res == nil || limit <= 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{})
+	var out []types.EndpointObservation
+
+	addCandidate := func(raw, source string) {
+		if raw == "" || len(out) >= limit {
+			return
+		}
+		// Ignore anchors and javascript: links
+		if strings.HasPrefix(raw, "#") || strings.HasPrefix(strings.ToLower(raw), "javascript:") {
+			return
+		}
+		resolved := raw
+		if u, err := url.Parse(raw); err == nil {
+			if !u.IsAbs() {
+				if base, berr := url.Parse(res.FinalURL); berr == nil {
+					resolved = base.ResolveReference(u).String()
+				}
+			}
+		}
+		if _, ok := seen[resolved]; ok {
+			return
+		}
+		seen[resolved] = struct{}{}
+
+		// Validate target URL and only proceed for http(s)
+		if _, err := security.ValidateTargetURL(resolved); err != nil {
+			return
+		}
+
+		// Perform a safe HEAD request with short timeout
+		client := security.SafeHTTPClient(4*time.Second, 2)
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }
+
+		reqCtx, cancel := context.WithTimeout(ctx, 4*time.Second)
+		defer cancel()
+		req, err := http.NewRequestWithContext(reqCtx, http.MethodHead, resolved, nil)
+		if err != nil {
+			return
+		}
+		req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; GaniumScanner/1.0)")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			// If HEAD fails, attempt a lightweight GET as fallback for servers that block HEAD
+			req, err = http.NewRequestWithContext(reqCtx, http.MethodGet, resolved, nil)
+			if err != nil {
+				return
+			}
+			resp, err = client.Do(req)
+			if err != nil {
+				return
+			}
+		}
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		domain := ""
+		if u, err := url.Parse(resolved); err == nil {
+			domain = u.Hostname()
+		}
+
+		out = append(out, types.EndpointObservation{
+			Endpoint:       resolved,
+			MethodObserved: "HEAD/GET",
+			Status:         resp.StatusCode,
+			ContentType:    ct,
+			Domain:         domain,
+			Source:         source,
+		})
+	}
+
+	// prioritize forms and scripts, then links
+	for _, f := range res.FormsFound {
+		addCandidate(f, "form_action")
+		if len(out) >= limit {
+			return out
+		}
+	}
+	for _, s := range res.ScriptsFound {
+		addCandidate(s, "script_reference")
+		if len(out) >= limit {
+			return out
+		}
+	}
+	for _, l := range res.LinksFound {
+		addCandidate(l, "link")
+		if len(out) >= limit {
+			return out
+		}
+	}
+
+	return out
 }

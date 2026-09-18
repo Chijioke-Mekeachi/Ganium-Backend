@@ -3,6 +3,8 @@ package sandbox
 import (
 	"context"
 	"time"
+
+	"ganium/pkg/types"
 )
 
 // SandboxResult holds the safe inspection output from an isolated run.
@@ -20,6 +22,10 @@ type SandboxResult struct {
 	ExecutionTime   time.Duration     `json:"execution_time"`
 	SandboxEngine   string            `json:"sandbox_engine"` // "safe_http_isolated", "container_browser"
 	SecurityFlags   []string          `json:"security_flags,omitempty"`
+
+	// Redirect information discovered during safe fetching
+	RedirectChain []types.RedirectHop `json:"redirect_chain,omitempty"`
+	FinalURL      string              `json:"final_url,omitempty"`
 }
 
 // SandboxRunner defines the contract for isolated target execution and inspection.

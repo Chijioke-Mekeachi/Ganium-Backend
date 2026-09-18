@@ -94,27 +94,38 @@ type ScriptEvidence struct {
 	Reason     string `json:"reason,omitempty"`
 }
 
+// EndpointObservation captures safe, passive observations of discovered endpoints.
+type EndpointObservation struct {
+	Endpoint       string `json:"endpoint"`
+	MethodObserved string `json:"method_observed,omitempty"`
+	Status         int    `json:"status,omitempty"`
+	ContentType    string `json:"content_type,omitempty"`
+	Domain         string `json:"domain,omitempty"`
+	Source         string `json:"source,omitempty"` // where we found it (form_action, script_reference, link)
+}
+
 // WebsiteEvidence captures passive/sandboxed inspection of webpage contents.
 type WebsiteEvidence struct {
-	Title                 string           `json:"title,omitempty"`
-	MetaDescription       string           `json:"meta_description,omitempty"`
-	LoginForm             bool             `json:"login_form"`
-	PasswordField         bool             `json:"password_field"`
-	WalletConnection      bool             `json:"wallet_connection"`
-	CryptoKeywords        []string         `json:"crypto_keywords,omitempty"`
-	Downloads             bool             `json:"downloads"`
-	DownloadLinks         []string         `json:"download_links,omitempty"`
-	ExternalScripts       []string         `json:"external_scripts,omitempty"`
-	SuspiciousScripts     []ScriptEvidence `json:"suspicious_scripts,omitempty"`
-	IframeUsage           bool             `json:"iframe_usage"`
-	IframeSources         []string         `json:"iframe_sources,omitempty"`
-	ObfuscatedJavaScript  bool             `json:"obfuscated_javascript"`
-	SuspiciousForms       []string         `json:"suspicious_forms,omitempty"`
-	BrandImpersonation    string           `json:"brand_impersonation,omitempty"`
-	UnexpectedExternalRes []string         `json:"unexpected_external_resources,omitempty"`
-	ContentHash           string           `json:"content_hash,omitempty"`
-	ExtractedWallets      []string         `json:"extracted_wallets,omitempty"`
-	ExtractedContracts    []string         `json:"extracted_contracts,omitempty"`
+	Title                 string                `json:"title,omitempty"`
+	MetaDescription       string                `json:"meta_description,omitempty"`
+	LoginForm             bool                  `json:"login_form"`
+	PasswordField         bool                  `json:"password_field"`
+	WalletConnection      bool                  `json:"wallet_connection"`
+	CryptoKeywords        []string              `json:"crypto_keywords,omitempty"`
+	Downloads             bool                  `json:"downloads"`
+	DownloadLinks         []string              `json:"download_links,omitempty"`
+	ExternalScripts       []string              `json:"external_scripts,omitempty"`
+	SuspiciousScripts     []ScriptEvidence      `json:"suspicious_scripts,omitempty"`
+	IframeUsage           bool                  `json:"iframe_usage"`
+	IframeSources         []string              `json:"iframe_sources,omitempty"`
+	ObfuscatedJavaScript  bool                  `json:"obfuscated_javascript"`
+	SuspiciousForms       []string              `json:"suspicious_forms,omitempty"`
+	BrandImpersonation    string                `json:"brand_impersonation,omitempty"`
+	UnexpectedExternalRes []string              `json:"unexpected_external_resources,omitempty"`
+	ContentHash           string                `json:"content_hash,omitempty"`
+	ExtractedWallets      []string              `json:"extracted_wallets,omitempty"`
+	ExtractedContracts    []string              `json:"extracted_contracts,omitempty"`
+	ObservedEndpoints     []EndpointObservation `json:"observed_endpoints,omitempty"`
 }
 
 // ThreatIntelligenceEvidence aggregates signals from threat intel sources.
