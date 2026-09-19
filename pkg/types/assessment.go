@@ -78,16 +78,20 @@ func NormalizeVerdict(v string) Verdict {
 // DefaultUnknownAssessment returns a safe controlled fallback assessment when evidence is insufficient or parsing fails.
 func DefaultUnknownAssessment(investigationID, reason string) FinalAssessment {
 	return FinalAssessment{
-		InvestigationID:    investigationID,
-		RiskScore:          50,
-		RiskLevel:          RiskLevelUnknown,
-		Verdict:            VerdictUnknown,
-		Confidence:         0.0,
-		Summary:            "Assessment inconclusive. " + reason,
-		Reasons:            []string{reason},
-		StrongestEvidence:  []string{"Insufficient or conflicting evidence provided."},
-		Uncertainty:        []string{"Deterministic signals and AI reasoning could not verify safety or malicious intent."},
-		RecommendedActions: []string{"Do not interact with the target until further verification.", "Verify the domain or address through official channels."},
-		EvaluatedAt:        time.Now().UTC(),
+		InvestigationID:   investigationID,
+		RiskScore:         50,
+		RiskLevel:         RiskLevelUnknown,
+		Verdict:           VerdictUnknown,
+		Confidence:        0.0,
+		Summary:           "Assessment inconclusive. " + reason,
+		Reasons:           []string{reason},
+		StrongestEvidence: []string{"Insufficient or conflicting evidence provided."},
+		Uncertainty:       []string{"Deterministic signals and AI reasoning could not verify safety or malicious intent."},
+		RecommendedActions: []string{
+			"Don't click links or download files from this target.",
+			"Check the domain or address on official sources (e.g., company site) or VirusTotal.",
+			"Wait a few minutes and try the scan again.",
+		},
+		EvaluatedAt: time.Now().UTC(),
 	}
 }
