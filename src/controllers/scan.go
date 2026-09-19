@@ -22,8 +22,8 @@ import (
 	"ganium/src/db"
 	"ganium/src/models"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -75,6 +75,14 @@ func ScanContent(userEmail string, payload models.RecordScanRequest) (bool, stri
 	if assessment == nil {
 		_ = CreateNotification(userEmail, "Scan failed", "Scan assessment was unavailable. Please try again.", "scan_failed")
 		return false, "assessment unavailable", nil, fmt.Errorf("empty assessment")
+	}
+
+	// If AI produced an unavailable assessment, treat this as a
+	// transient backend issue. Do not charge or persist a scan record
+	// and do not surface internal error details to the user.
+	if assessment.ModelName == "unavailable" {
+		_ = CreateNotification(userEmail, "Scan delayed", "AI service is temporarily overloaded. Please wait a little and try again.", "scan_delayed")
+		return false, "ai_unavailable", nil, fmt.Errorf("ai unavailable")
 	}
 
 	tokenCost := assessment.TokensUsed

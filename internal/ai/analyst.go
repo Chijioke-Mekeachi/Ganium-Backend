@@ -144,7 +144,7 @@ Return only valid JSON matching this schema:
 			},
 		},
 		"generationConfig": map[string]any{
-			"maxOutputTokens": 1200,
+			"maxOutputTokens":    1200,
 			"response_mime_type": "application/json",
 		},
 	}
@@ -269,14 +269,10 @@ func (g *GeminiAnalyst) assessConcurrently(
 	}
 
 	// Every Gemini model failed.
-	//
-	// Do NOT make the entire security scan fail just because Gemini is
-	// temporarily unavailable.
-	reason := "All Gemini AI models were unavailable."
-
-	if len(errorsSeen) > 0 {
-		reason += " " + strings.Join(errorsSeen, " | ")
-	}
+	// Do NOT include raw Gemini error details in the assessment visible
+	// to end users — these may contain sensitive or large payloads.
+	// Provide a generic, actionable message instead.
+	reason := "AI models were temporarily unavailable; please wait a little and try again."
 
 	assessment := types.DefaultUnknownAssessment(
 		evidence.InvestigationID,

@@ -149,20 +149,69 @@ func (m *Manager) Investigate(ctx context.Context, req Request) (*Result, error)
 
 	assessment, err := m.analyst.Assess(ctx, bundle)
 	if err != nil || assessment == nil {
+		// Do not expose internal error details to users. Return a
+		// generic unavailable assessment so callers can handle it
+		// without leaking internal error messages.
 		reason := "AI assessment unavailable"
-		if err != nil {
-			reason = reason + ": " + err.Error()
-		}
 		fallback := types.DefaultUnknownAssessment(investigationID, reason)
 		fallback.Entities = snapshotEntities(bundle)
 		fallback.ModelName = "unavailable"
 		assessment = &fallback
 	}
 
+	// Simplify the user-visible "next steps" to be short, clear items
+	// suitable for non-technical users.
+	sanitizeAssessmentForUsers(assessment)
+
 	return &Result{
 		Evidence:   bundle,
 		Assessment: assessment,
 	}, nil
+}
+
+// sanitizeAssessmentForUsers shortens and simplifies the assessment summary
+// and recommended actions so basic users can quickly understand next steps.
+func sanitizeAssessmentForUsers(a *types.FinalAssessment) {
+	if a == nil {
+		return
+	}
+
+	// Shorten summary to a concise first sentence if it's long.
+	if len(a.Summary) > 240 {
+		// Try to cut at the first period to keep a full sentence.
+		if idx := strings.Index(a.Summary, "."); idx > 0 && idx < 200 {
+			a.Summary = strings.TrimSpace(a.Summary[:idx+1])
+		} else {
+			a.Summary = strings.TrimSpace(a.Summary[:200]) + "..."
+		}
+	}
+
+	// Normalize recommended actions: keep up to 4 short, plain-language steps.
+	var out []string
+	for _, r := range a.RecommendedActions {
+		if len(out) >= 4 {
+			break
+		}
+		step := strings.TrimSpace(r)
+		if step == "" {
+			continue
+		}
+		// If too long, truncate to a shorter instruction.
+		if len(step) > 120 {
+			step = strings.TrimSpace(step[:117]) + "..."
+		}
+		out = append(out, step)
+	}
+
+	if len(out) == 0 {
+		out = []string{
+			"Don't click links or download files from this target.",
+			"Check the domain or address on official sources or VirusTotal.",
+			"Wait a few minutes and try the scan again.",
+		}
+	}
+
+	a.RecommendedActions = out
 }
 
 func (m *Manager) collectURLEvidence(ctx context.Context, target string) (*types.URLEvidence, error) {
